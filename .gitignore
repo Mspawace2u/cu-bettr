@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+dist
+.astro
+.vercel
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode
+.idea
+*.code-workspace
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
