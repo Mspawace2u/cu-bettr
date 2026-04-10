@@ -398,7 +398,7 @@ const App = () => {
                         {/* DANGER ZONE */}
                         {habits.length > 0 && (
                             <div className="pt-12 pb-8 px-2">
-                                <div className="flex items-center gap-3 mb-4 opacity-30">
+                                <div className="flex items-center gap-3 mb-8 opacity-30">
                                     <div className="h-[1px] flex-1 bg-brand-accent2/50" />
                                     <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] font-black text-brand-accent2">
                                         <AlertTriangle size={12} />
