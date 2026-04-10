@@ -247,7 +247,7 @@ const App = () => {
 
     return (
         <div className="min-h-screen bg-brand-bg text-brand-foreground font-sans selection:bg-brand-primary/30">
-            <header className="fixed top-0 inset-x-0 h-20 px-6 flex items-center justify-between bg-brand-bg/80 backdrop-blur-3xl z-50 border-b border-white/5">
+            <header className="fixed top-0 inset-x-0 h-24 pt-4 px-6 flex items-center justify-between bg-brand-bg/80 backdrop-blur-3xl z-50 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <img src="/favicon.png" className="h-8 w-8 object-contain" alt="Logo" />
                     <span className="font-extrabold text-lg tracking-tighter text-white uppercase">CU Bettr</span>
@@ -408,7 +408,7 @@ const App = () => {
                                 </div>
                                 <button 
                                     onClick={handleFactoryReset}
-                                    className="w-full py-4 rounded-2xl border border-brand-accent2/20 text-brand-accent2/60 hover:text-brand-accent2 hover:bg-brand-accent2/5 transition-all font-mono text-[10px] uppercase tracking-[0.2em] font-bold"
+                                    className="w-full py-4 rounded-full border border-brand-accent2/20 text-brand-accent2/60 hover:text-brand-accent2 hover:bg-brand-accent2/5 transition-all font-mono text-[10px] uppercase tracking-[0.2em] font-bold"
                                 >
                                     Wipe All Data
                                 </button>
