@@ -16,7 +16,8 @@ import {
     Trash2,
     PlusCircle,
     ChevronDown,
-    Home
+    Home,
+    AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -148,18 +149,80 @@ const App = () => {
     };
 
     const handleDeleteEntry = async (entryId, habitId) => {
-        const { error } = await supabase.from('entries').delete().eq('id', entryId);
+        const { data, error } = await supabase.from('entries').delete().eq('id', entryId).select();
         if (error) {
-            console.error('Error deleting entry:', error);
+            window.alert(`Error deleting entry: ${error.message}`);
             return;
         }
+        
+        if (!data || data.length === 0) {
+            window.alert("Database rejected deletion (0 rows affected). Please check your Supabase RLS policies.");
+            return;
+        }
+
         const updatedHabits = habits.map(h => {
             if (h.id === habitId) {
-                return { ...h, entries: h.entries.filter(e => e.id !== entryId) };
+                return { ...h, entries: (h.entries || []).filter(e => e.id !== entryId) };
             }
             return h;
         });
         setHabits(updatedHabits);
+    };
+
+    const handleDeleteHabit = async (habitId) => {
+        if (!window.confirm("Are you sure you want to delete this entire habit and all its logs? This cannot be undone.")) return;
+        
+        // 1. Delete Entries
+        const { data: entriesDeleted, error: entryError } = await supabase.from('entries').delete().eq('habit_id', habitId).select();
+        if (entryError) {
+            window.alert(`Error deleting logs: ${entryError.message}`);
+            return;
+        }
+
+        // 2. Delete Habit
+        const { data: habitsDeleted, error: habitError } = await supabase.from('habits').delete().eq('id', habitId).select();
+        if (habitError) {
+            window.alert(`Error deleting habit: ${habitError.message}`);
+            return;
+        }
+
+        if (!habitsDeleted || habitsDeleted.length === 0) {
+            window.alert(`Database rejected habit deletion (0 habits affected). Logs removed: ${entriesDeleted?.length || 0}. Please check RLS.`);
+            return;
+        }
+        
+        setHabits(habits.filter(h => h.id !== habitId));
+        setExpandedHabits(prev => {
+            const next = new Set(prev);
+            next.delete(habitId);
+            return next;
+        });
+    };
+
+    const handleFactoryReset = async () => {
+        if (!window.confirm("CRITICAL ACTION: This will PERMANENTLY WIPE all habits and logs from your account. Are you absolutely sure?")) return;
+        if (!window.confirm("FINAL CONFIRMATION: Tap OK to destroy all data and start over.")) return;
+
+        setLoading(true);
+        // Delete all entries
+        const { data: entriesDeleted, error: entryError } = await supabase.from('entries').delete().filter('id', 'neq', '00000000-0000-0000-0000-000000000000').select();
+        
+        // Delete all habits
+        const { data: habitsDeleted, error: habitError } = await supabase.from('habits').delete().filter('id', 'neq', '00000000-0000-0000-0000-000000000000').select();
+
+        const entryCount = entriesDeleted?.length || 0;
+        const habitCount = habitsDeleted?.length || 0;
+
+        if (habitCount === 0 && habits.length > 0) {
+            window.alert(`DIAGNOSIS FAIL: 0 habits were deleted from the cloud. \n\nThis means your Supabase "DELETE" Policy is missing. \n\nPlease go to your Supabase Dashboard and add a Policy for "Enable DELETE for anon".`);
+        } else {
+            window.alert(`SUCCESS: Factory Reset Complete. \n\nCleaned ${habitCount} habits and ${entryCount} logs from the cloud.`);
+        }
+
+        setHabits([]);
+        setExpandedHabits(new Set());
+        setLoading(false);
+        confetti({ particleCount: 100 });
     };
 
     const toggleHabitExpand = (id) => {
@@ -207,11 +270,15 @@ const App = () => {
                 {view === 'home' ? (
                     <div className="px-6 space-y-6">
                         {habits.length === 0 ? (
-                             <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <Sparkles size={48} className="text-brand-accent2 mb-4 opacity-50" />
-                                <h3 className="text-xl font-bold mb-2 text-white uppercase">The Clean Slate</h3>
-                                <p className="text-sm text-brand-muted mb-8 text-balance px-12">No habits active in the stack. Ready to start building foundation?</p>
-                                <button onClick={() => setIsLayering(true)} className="px-10 py-4 bg-brand-primary text-brand-bg rounded-full font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,228,77,0.3)]">Place First Layer</button>
+                             <div className="flex flex-col items-center justify-center py-20 text-center px-12">
+                                <Flame size={64} className="text-brand-primary mb-8" strokeWidth={0.5} />
+                                <h3 className="text-2xl font-black mb-3 text-white uppercase tracking-tighter">The Clean Slate</h3>
+                                <p className="text-sm text-brand-muted mb-12 text-balance leading-relaxed">No habits active in your stack. Start building your bettr habit foundation now.</p>
+                                <button onClick={() => setIsLayering(true)} className="w-full max-w-[240px] relative p-[1.5px] rounded-full bg-gradient-to-r from-[#ffe44d] via-[#9b5cff] via-[#2de2e6] to-[#ff2f92] animate-rainbow-glow bg-[length:200%_auto] hover:bg-[#ffe44d] transition-all group active:scale-95 shadow-lg">
+                                    <div className="bg-brand-bg group-hover:bg-[#ffe44d] text-white group-hover:text-brand-bg rounded-full py-4 text-center font-mono text-[11px] font-black tracking-[0.4em] uppercase transition-colors">
+                                        Place First Layer
+                                    </div>
+                                </button>
                              </div>
                         ) : (
                             <>
@@ -256,7 +323,7 @@ const App = () => {
                                                         isDone={hDoneToday} 
                                                         streak={getStreak(h)}
                                                         onToggle={() => handleComplete(h.id, 1)}
-                                                        onDeleteToday={() => handleDeleteEntry(hTodayEntry.id, h.id)}
+                                                        onDeleteToday={() => hTodayEntry && handleDeleteEntry(hTodayEntry.id, h.id)}
                                                     />
                                                 );
                                             })}
@@ -291,29 +358,62 @@ const App = () => {
                                     {expandedHabits.has(h.id) && (
                                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                             <div className="space-y-3 pt-6">
-                                                {h.entries.slice().reverse().map((e, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0 group">
-                                                        <span className="text-xs font-medium text-brand-muted">{formatFullDate(e.created_at || e.date)}</span>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: e.resistance === 1 ? "#2de2e6" : e.resistance === 2 ? "#ffe44d" : "#ff2f92" }} />
-                                                                <span className="font-mono text-[9px] uppercase tracking-tighter text-white/60">R{e.resistance}</span>
+                                                {h.entries.length > 0 ? (
+                                                    h.entries.slice().reverse().map((e, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0 group">
+                                                            <span className="text-xs font-medium text-brand-muted">{formatFullDate(e.created_at || e.date)}</span>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: e.resistance === 1 ? "#2de2e6" : e.resistance === 2 ? "#ffe44d" : "#ff2f92" }} />
+                                                                    <span className="font-mono text-[9px] uppercase tracking-tighter text-white/60">R{e.resistance}</span>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => handleDeleteEntry(e.id, h.id)}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-rose-500 text-white/20"
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
                                                             </div>
-                                                            <button 
-                                                                onClick={() => handleDeleteEntry(e.id, h.id)}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-rose-500 text-white/20"
-                                                            >
-                                                                <Trash2 size={12} />
-                                                            </button>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))
+                                                ) : (
+                                                    <p className="text-[10px] text-brand-muted uppercase font-mono tracking-widest text-center py-4">No logs yet</p>
+                                                )}
+                                                
+                                                <div className="pt-6 mt-6 border-t border-white/5">
+                                                    <button 
+                                                        onClick={() => handleDeleteHabit(h.id)}
+                                                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl hover:bg-rose-500/10 text-rose-500/40 hover:text-rose-500 transition-all font-mono text-[9px] uppercase tracking-widest font-black"
+                                                    >
+                                                        <Trash2 size={14} /> Delete Habit
+                                                    </button>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
                         ))}
+
+                        {/* DANGER ZONE */}
+                        {habits.length > 0 && (
+                            <div className="pt-12 pb-8 px-2">
+                                <div className="flex items-center gap-3 mb-4 opacity-30">
+                                    <div className="h-[1px] flex-1 bg-brand-accent2/50" />
+                                    <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] font-black text-brand-accent2">
+                                        <AlertTriangle size={12} />
+                                        Danger Zone
+                                    </div>
+                                    <div className="h-[1px] flex-1 bg-brand-accent2/50" />
+                                </div>
+                                <button 
+                                    onClick={handleFactoryReset}
+                                    className="w-full py-4 rounded-2xl border border-brand-accent2/20 text-brand-accent2/60 hover:text-brand-accent2 hover:bg-brand-accent2/5 transition-all font-mono text-[10px] uppercase tracking-[0.2em] font-bold"
+                                >
+                                    Wipe All Data
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
@@ -330,7 +430,11 @@ const App = () => {
                                 placeholder="What's next?"
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddLayer()}
                             />
-                            <button onClick={handleAddLayer} className="w-full bg-brand-primary text-brand-bg rounded-xl py-6 font-mono text-xs font-black tracking-[0.4em] uppercase shadow-[0_0_30px_rgba(255,228,77,0.2)]">Commit Layer</button>
+                            <button onClick={handleAddLayer} className="w-full relative p-[1.5px] rounded-full bg-gradient-to-r from-[#ffe44d] via-[#9b5cff] via-[#2de2e6] to-[#ff2f92] animate-rainbow-glow bg-[length:200%_auto] hover:bg-[#ffe44d] transition-all group active:scale-95 shadow-lg">
+                                <div className="bg-brand-bg group-hover:bg-[#ffe44d] text-white group-hover:text-brand-bg rounded-full py-5 text-center font-mono text-[11px] font-black tracking-[0.4em] uppercase transition-colors">
+                                    Commit Layer
+                                </div>
+                            </button>
                             <button onClick={() => setIsLayering(false)} className="w-full text-brand-muted font-mono text-[10px] uppercase mt-8 tracking-[0.3em] hover:text-white transition-colors">Cancel</button>
                         </div>
                     </motion.div>
@@ -356,31 +460,46 @@ const FocusHabitCard = ({ habit, isDone, streak, onLog, onEdit }) => (
         {!isDone ? (
             <ResistanceControl onComplete={onLog} />
         ) : (
-            <div className="flex flex-col items-center py-6 text-center">
+            <div className="flex flex-col items-center py-6 text-center group cursor-pointer relative" onClick={onEdit}>
                 <motion.div 
                     initial={{ scale: 0 }} animate={{ scale: 1 }} 
                     className="h-20 w-20 rounded-full p-[2px] bg-gradient-to-tr from-brand-secondary via-brand-accent1 to-brand-accent2 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(155,92,255,0.2)]"
                 >
-                    <div className="h-full w-full rounded-full bg-brand-card flex items-center justify-center">
-                        <Check size={40} className="text-brand-primary" />
+                    <div className="h-full w-full rounded-full bg-brand-card flex items-center justify-center relative overflow-hidden">
+                        <Check size={40} className="text-brand-primary transition-transform group-hover:translate-y-20" />
+                        <Trash2 
+                            size={32} 
+                            className="absolute inset-0 m-auto text-brand-accent2 translate-y-20 group-hover:translate-y-0 transition-transform" 
+                        />
                     </div>
                 </motion.div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-brand-accent2 font-black">LOGGED FOR TODAY</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-brand-accent2 font-black group-hover:text-brand-primary transition-colors">
+                    LOGGED FOR TODAY
+                </p>
+                <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to undo
+                </p>
             </div>
         )}
     </motion.div>
 );
 
-const FoundationHabitCard = ({ habit, isDone, streak, onToggle }) => (
+const FoundationHabitCard = ({ habit, isDone, streak, onToggle, onDeleteToday }) => (
     <div className={`p-5 rounded-2xl border transition-all ${isDone ? 'bg-white/[0.02] border-white/5 opacity-60' : 'bg-brand-card border-white/10 shadow-lg'}`}>
         <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button 
-                    disabled={isDone}
-                    onClick={onToggle}
-                    className={`h-10 w-10 flex items-center justify-center transition-all ${isDone ? 'text-brand-accent1' : 'text-white/20 hover:text-white/40'}`}
+                    onClick={isDone ? onDeleteToday : onToggle}
+                    className={`h-10 w-10 flex items-center justify-center transition-all group ${isDone ? 'text-brand-accent1 hover:text-rose-500' : 'text-white/20 hover:text-white/40'}`}
                 >
-                    {isDone ? <CheckCircle2 size={28} /> : <Circle size={28} />}
+                    {isDone ? (
+                        <div className="relative h-7 w-7 flex items-center justify-center">
+                            <CheckCircle2 size={28} className="transition-opacity group-hover:opacity-0" />
+                            <Trash2 size={24} className="absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                    ) : (
+                        <Circle size={24} />
+                    )}
                 </button>
                 <div className="min-w-0">
                     <h3 className={`font-bold text-sm tracking-tight truncate ${isDone ? 'text-white/40 line-through' : 'text-white/90'}`}>{habit.name}</h3>

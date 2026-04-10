@@ -13,6 +13,11 @@ dist
 .idea
 *.code-workspace
 .DS_Store
+.gemini
+
+# Project specific
+misc-docs/
+scratch/
 
 # Logs
 npm-debug.log*
