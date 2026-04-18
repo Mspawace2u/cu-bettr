@@ -269,9 +269,13 @@ const App = () => {
                              </div>
                         ) : (
                             <>
+                                <div className="mb-8 pl-2">
+                                    <h2 className="text-3xl font-black tracking-tighter text-white uppercase">Habits</h2>
+                                    <p className="text-[10px] text-brand-muted font-mono uppercase tracking-[0.3em] mt-1">Focus Layer</p>
+                                </div>
+
                                 {/* Focus Habit (Newest on Top) */}
                                 <div className="space-y-4">
-                                     <span className="font-mono text-[10px] text-brand-muted tracking-[0.3em] uppercase font-bold pl-2 block mb-2">Focus Layer</span>
                                      <FocusHabitCard 
                                         habit={focusHabit} 
                                         isDone={!!todayEntryForFocus} 

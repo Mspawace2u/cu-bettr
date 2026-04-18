@@ -3,7 +3,7 @@ import { BarChart3, Home } from 'lucide-react';
 export default function AppHeader({ view, setView }) {
     return (
         <header
-            className="sticky top-0 z-50 w-full bg-brand-bg/60 backdrop-blur-xl backdrop-saturate-150 border-b border-white/5"
+            className="sticky top-0 z-50 w-full bg-brand-bg/45 backdrop-blur-xl backdrop-saturate-150 border-b border-white/5"
             style={{ paddingTop: 'env(safe-area-inset-top)' }}
         >
             <div className="max-w-[var(--shell-max-w)] mx-auto px-[var(--shell-pad-x)] py-5 flex items-center justify-between">
