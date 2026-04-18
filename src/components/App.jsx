@@ -20,6 +20,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import AppHeader from './UI/AppHeader';
 
 const App = () => {
     const [view, setView] = useState('home');
@@ -246,27 +247,13 @@ const App = () => {
     const readyToStack = focusHabit && getMasteryCount(focusHabit) >= 5 && todayResistanceForFocus > 0 && todayResistanceForFocus < 3;
 
     return (
-        <div className="min-h-screen bg-brand-bg text-brand-foreground font-sans selection:bg-brand-primary/30">
-            <header className="fixed top-0 inset-x-0 h-24 pt-4 px-6 flex items-center justify-between bg-brand-bg/80 backdrop-blur-3xl z-50 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <img src="/favicon.png" className="h-8 w-8 object-contain" alt="Logo" />
-                    <span className="font-extrabold text-lg tracking-tighter text-white uppercase">CU Bettr</span>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                    <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-white/40 animate-pulsate-opacity">
-                        HABIT STACKER
-                    </span>
-                    <button
-                        onClick={() => setView(view === 'home' ? 'history' : 'home')}
-                        className="h-10 w-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center border border-white/5 transition-all active:scale-95"
-                    >
-                        {view === 'home' ? <BarChart3 size={20} className="text-brand-primary" /> : <Home size={20} className="text-brand-accent2" />}
-                    </button>
-                </div>
-            </header>
+        <div className="min-h-screen min-h-[100dvh] bg-brand-bg text-brand-foreground font-sans selection:bg-brand-primary/30 flex flex-col">
+            <AppHeader view={view} setView={setView} />
 
-            <main className="pt-28 max-w-md mx-auto pb-32">
+            <main
+                className="flex-1 w-full max-w-[var(--shell-max-w)] mx-auto"
+                style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom))' }}
+            >
                 {view === 'home' ? (
                     <div className="px-6 space-y-6">
                         {habits.length === 0 ? (
@@ -282,9 +269,13 @@ const App = () => {
                              </div>
                         ) : (
                             <>
+                                <div className="mb-8 pl-2">
+                                    <h2 className="text-3xl font-black tracking-tighter text-white uppercase">Habits</h2>
+                                    <p className="text-[10px] text-brand-muted font-mono uppercase tracking-[0.3em] mt-1">Focus Layer</p>
+                                </div>
+
                                 {/* Focus Habit (Newest on Top) */}
                                 <div className="space-y-4">
-                                     <span className="font-mono text-[10px] text-brand-muted tracking-[0.3em] uppercase font-bold pl-2 block mb-2">Focus Layer</span>
                                      <FocusHabitCard 
                                         habit={focusHabit} 
                                         isDone={!!todayEntryForFocus} 

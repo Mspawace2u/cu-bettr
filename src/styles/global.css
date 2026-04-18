@@ -12,6 +12,10 @@
   --color-brand-muted: #5B6B7F;
   --color-brand-foreground: #F3F4F6;
 
+  /* App shell layout tokens. Header and main MUST share both. */
+  --shell-max-w: 480px;
+  --shell-pad-x: 1.5rem;
+
   --font-sans: "Urbanist", sans-serif;
   --font-mono: "Kumbh Sans", sans-serif;
 
@@ -32,6 +36,8 @@
 @layer base {
   body {
     @apply bg-brand-bg text-brand-foreground antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
     -webkit-tap-highlight-color: transparent;
   }
 }
